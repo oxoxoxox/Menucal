@@ -53,7 +53,7 @@ Menucal 使用 SwiftUI、AppKit、EventKit 和 AVFoundation 开发，最低支�
 
 ## 隐私
 
-日历事件的读取和修改均通过系统 EventKit 在本机完成，不会上传日历内容。只有在手动检查或下载更新时，Menucal 才会访问 GitHub Release。
+日历事件的读取和修改均通过系统 EventKit 在本机完成，不会上传日历内容。Menucal 启动后会定期检查 GitHub Release，手动检查或下载更新时也会访问 GitHub。
 
 ## 致谢
 

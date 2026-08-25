@@ -13,6 +13,17 @@ private struct ReleaseInfo {
     let downloadURL: URL?
 }
 
+enum UpdateCheckSource {
+    case automatic
+    case manual
+}
+
+enum UpdateAvailability {
+    case unknown
+    case upToDate
+    case available(version: String)
+}
+
 private enum UpdateError: LocalizedError {
     case invalidResponse
     case requestFailed(String)
@@ -30,22 +41,42 @@ private enum UpdateError: LocalizedError {
 class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     static let shared = UpdateManager()
 
+    private enum DefaultsKey {
+        static let lastSuccessfulCheckDate = "update.lastSuccessfulCheckDate"
+        static let latestVersion = "update.latestVersion"
+    }
+
     private let apiLatestReleaseURL = URL(string: "https://api.github.com/repos/ervinsae/Menucal/releases/latest")!
     private let webLatestReleaseURL = URL(string: "https://github.com/ervinsae/Menucal/releases/latest")!
     private let releaseDownloadBaseURL = "https://github.com/ervinsae/Menucal/releases/download"
+    private let automaticCheckInterval: TimeInterval = 24 * 60 * 60
     
     private var currentVersion: String {
         Bundle.main.appVersion ?? "1.0.0"
     }
 
-    @Published var isChecking = false
-    @Published var isDownloading = false
-    @Published var downloadProgress = 0.0
-    @Published var latestVersion: String?
-    @Published var updateAvailable = false
-    @Published var downloadURL: URL?
-    @Published var downloadedFileURL: URL?  // 新增：保存下载后的本地文件路径
-    @Published var downloadError: String?
+    @Published private(set) var availability: UpdateAvailability = .unknown
+    @Published private(set) var isChecking = false
+    @Published private(set) var checkError: String?
+    @Published private(set) var isDownloading = false
+    @Published private(set) var downloadProgress = 0.0
+    @Published private(set) var downloadURL: URL?
+    @Published private(set) var downloadedFileURL: URL?
+    @Published private(set) var downloadError: String?
+
+    var updateAvailable: Bool {
+        if case .available = availability {
+            return true
+        }
+        return false
+    }
+
+    var latestVersion: String? {
+        guard case .available(let version) = availability else {
+            return nil
+        }
+        return version
+    }
 
     private var downloadCompletion: ((URL?, Error?) -> Void)?
     private var pendingDownloadURL: URL?
@@ -56,43 +87,76 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
 
     private override init() {
         super.init()
+        restoreCachedAvailability()
     }
 
-    func checkForUpdates() async {
+    func checkForUpdates(source: UpdateCheckSource = .manual) async {
         guard !isChecking else { return }
 
-        await MainActor.run {
-            isChecking = true
-            updateAvailable = false
-            downloadURL = nil
-            downloadedFileURL = nil
-            latestVersion = nil
-            downloadError = nil
+        switch source {
+        case .automatic:
+            guard shouldPerformAutomaticCheck else { return }
+        case .manual:
+            break
+        }
+
+        isChecking = true
+        if case .manual = source {
+            checkError = nil
         }
 
         defer {
-            Task { @MainActor in
-                isChecking = false
-            }
+            isChecking = false
         }
 
         do {
             let release = try await fetchLatestRelease()
             let comparisonResult = compareVersions(currentVersion, release.version)
 
-            await MainActor.run {
-                latestVersion = release.version
-
-                if comparisonResult == .orderedAscending {
-                    updateAvailable = true
-                    downloadURL = release.downloadURL
-                }
+            checkError = nil
+            if comparisonResult == .orderedAscending {
+                availability = .available(version: release.version)
+                downloadURL = release.downloadURL
+            } else {
+                availability = .upToDate
+                downloadURL = nil
             }
+            persistSuccessfulCheck(version: release.version)
         } catch {
-            await MainActor.run {
-                downloadError = error.localizedDescription
+            if case .manual = source {
+                checkError = error.localizedDescription
             }
         }
+    }
+
+    private var shouldPerformAutomaticCheck: Bool {
+        guard let lastCheckDate = UserDefaults.standard.object(
+            forKey: DefaultsKey.lastSuccessfulCheckDate
+        ) as? Date else {
+            return true
+        }
+
+        return Date().timeIntervalSince(lastCheckDate) >= automaticCheckInterval
+    }
+
+    private func restoreCachedAvailability() {
+        guard let cachedVersion = UserDefaults.standard.string(
+            forKey: DefaultsKey.latestVersion
+        ) else {
+            return
+        }
+
+        if compareVersions(currentVersion, cachedVersion) == .orderedAscending {
+            availability = .available(version: cachedVersion)
+            downloadURL = fallbackDownloadURL(forVersion: cachedVersion)
+        } else {
+            availability = .upToDate
+        }
+    }
+
+    private func persistSuccessfulCheck(version: String) {
+        UserDefaults.standard.set(version, forKey: DefaultsKey.latestVersion)
+        UserDefaults.standard.set(Date(), forKey: DefaultsKey.lastSuccessfulCheckDate)
     }
 
     private func fetchLatestRelease() async throws -> ReleaseInfo {
@@ -204,6 +268,9 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     }
 
     func cancelDownload() {
+        downloadCompletion = nil
+        pendingDownloadURL = nil
+        downloadError = nil
         downloadSession.getAllTasks { tasks in
             tasks.forEach { $0.cancel() }
         }
@@ -233,13 +300,19 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
             DispatchQueue.main.async {
                 self.isDownloading = false
                 self.downloadProgress = 1.0
-                self.downloadedFileURL = destinationURL  // 保存本地文件路径
-                self.downloadCompletion?(destinationURL, nil)
+                self.downloadedFileURL = destinationURL
+                let completion = self.downloadCompletion
+                self.downloadCompletion = nil
+                self.pendingDownloadURL = nil
+                completion?(destinationURL, nil)
             }
         } catch {
             DispatchQueue.main.async {
                 self.isDownloading = false
-                self.downloadCompletion?(nil, error)
+                let completion = self.downloadCompletion
+                self.downloadCompletion = nil
+                self.pendingDownloadURL = nil
+                completion?(nil, error)
             }
         }
     }
@@ -255,10 +328,18 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                return
+            }
+
             DispatchQueue.main.async {
                 self.isDownloading = false
                 self.downloadError = error.localizedDescription
-                self.downloadCompletion?(nil, error)
+                let completion = self.downloadCompletion
+                self.downloadCompletion = nil
+                self.pendingDownloadURL = nil
+                completion?(nil, error)
             }
         }
     }

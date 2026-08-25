@@ -209,6 +209,15 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
             name: NSApplication.didResignActiveNotification,
             object: nil
         )
+
+        scheduleAutomaticUpdateCheck()
+    }
+
+    private func scheduleAutomaticUpdateCheck() {
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await UpdateManager.shared.checkForUpdates(source: .automatic)
+        }
     }
 
     private func applyCalendarIcon(to button: NSStatusBarButton) {
