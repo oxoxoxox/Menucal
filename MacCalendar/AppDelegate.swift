@@ -9,6 +9,53 @@ import SwiftUI
 import AppKit
 import Combine
 
+private enum MenuBarDateIconRenderer {
+    static func image(for date: Date, calendar: Calendar = .autoupdatingCurrent) -> NSImage {
+        let day = calendar.component(.day, from: date)
+        let configuration = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        if let image = NSImage(
+            systemSymbolName: "\(day).calendar",
+            accessibilityDescription: "Calendar"
+        )?.withSymbolConfiguration(configuration) {
+            image.isTemplate = true
+            return image
+        }
+
+        let monochromeConfiguration = NSImage.SymbolConfiguration(hierarchicalColor: .black)
+        let fallbackConfiguration = configuration.applying(monochromeConfiguration)
+        guard let calendarImage = NSImage(
+            systemSymbolName: "calendar",
+            accessibilityDescription: "Calendar"
+        )?.withSymbolConfiguration(fallbackConfiguration) else {
+            return NSImage(size: NSSize(width: 18, height: 18))
+        }
+
+        let size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: size, flipped: false) { rect in
+            calendarImage.draw(in: rect)
+
+            NSGraphicsContext.current?.compositingOperation = .clear
+            NSRect(x: 3.15, y: 2.55, width: 11.7, height: 8.4).fill()
+            NSGraphicsContext.current?.compositingOperation = .sourceOver
+
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 8.4, weight: .regular),
+                .foregroundColor: NSColor.black,
+                .paragraphStyle: paragraphStyle
+            ]
+            String(day).draw(
+                in: NSRect(x: 2.6, y: 3, width: 12.8, height: 8.3),
+                withAttributes: attributes
+            )
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+}
+
 final class PopoverPresentationState: ObservableObject {
     @Published private(set) var isPinned = false
 
@@ -53,17 +100,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
             button.target = self
             button.font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
             button.isHidden = false
-            // 初始显示图标：根据当前日期显示对应日期的符号
-            let day = Calendar.current.component(.day, from: Date())
-            let symbolName = "\(day).calendar"
-            let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
-            if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Calendar")?.withSymbolConfiguration(config) {
-                image.isTemplate = true
-                button.image = image
-            } else if let image = NSImage(systemSymbolName: "calendar", accessibilityDescription: "Calendar")?.withSymbolConfiguration(config) {
-                image.isTemplate = true
-                button.image = image
-            }
+            applyCalendarIcon(to: button)
         }
 
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -91,24 +128,9 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
                 }
 
                 if output == "" {
-                    // 图标模式：根据当前日期显示对应日期的符号
                     button.title = ""
                     button.attributedTitle = NSAttributedString(string: "")
-
-                    let day = Calendar.current.component(.day, from: Date())
-                    let symbolName = "\(day).calendar"
-                    let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
-
-                    if let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Calendar")?.withSymbolConfiguration(config) {
-                        image.isTemplate = true
-                        button.image = image
-                    } else {
-                        // 如果没有对应日期的图标，回退到默认日历图标
-                        if let image = NSImage(systemSymbolName: "calendar", accessibilityDescription: "Calendar")?.withSymbolConfiguration(config) {
-                            image.isTemplate = true
-                            button.image = image
-                        }
-                    }
+                    self.applyCalendarIcon(to: button)
                     self.statusItem.length = NSStatusItem.squareLength
                 } else if output.contains("\n") {
                     // 双行显示，使用自定义视图添加到按钮上（按钮本身处理点击）
@@ -187,6 +209,12 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
             name: NSApplication.didResignActiveNotification,
             object: nil
         )
+    }
+
+    private func applyCalendarIcon(to button: NSStatusBarButton) {
+        button.image = MenuBarDateIconRenderer.image(for: Date())
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleProportionallyDown
     }
 
     func applicationWillTerminate(_ notification: Notification) {
