@@ -19,6 +19,7 @@
 		0CE2D2192E89390000C92A10 /* 2024.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CE2D2092E89390000C92A10 /* 2024.json */; };
 		0CE2D21A2E89390000C92A10 /* 2025.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CE2D20A2E89390000C92A10 /* 2025.json */; };
 		0CE2D21B2E89390000C92A10 /* 2026.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CE2D20B2E89390000C92A10 /* 2026.json */; };
+		0CE2D21C2E89390000C92A10 /* 2027.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CE2D20C2E89390000C92A10 /* 2027.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,6 +36,7 @@
 		0CE2D2092E89390000C92A10 /* 2024.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2024.json; sourceTree = "<group>"; };
 		0CE2D20A2E89390000C92A10 /* 2025.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2025.json; sourceTree = "<group>"; };
 		0CE2D20B2E89390000C92A10 /* 2026.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2026.json; sourceTree = "<group>"; };
+		0CE2D20C2E89390000C92A10 /* 2027.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2027.json; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -101,6 +103,7 @@
 				0CE2D2092E89390000C92A10 /* 2024.json */,
 				0CE2D20A2E89390000C92A10 /* 2025.json */,
 				0CE2D20B2E89390000C92A10 /* 2026.json */,
+				0CE2D20C2E89390000C92A10 /* 2027.json */,
 			);
 			path = MacCalendar/Data;
 			sourceTree = "<group>";
@@ -182,6 +185,7 @@
 				0CE2D2192E89390000C92A10 /* 2024.json in Resources */,
 				0CE2D21A2E89390000C92A10 /* 2025.json in Resources */,
 				0CE2D21B2E89390000C92A10 /* 2026.json in Resources */,
+				0CE2D21C2E89390000C92A10 /* 2027.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,7 +325,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MacCalendar/MacCalendar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = B7NL26JPVD;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -346,7 +350,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.3;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Ervin.Menucal;
 				PRODUCT_NAME = Menucal;
 				REGISTER_APP_GROUPS = YES;
@@ -371,7 +375,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = MacCalendar/MacCalendar.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 29;
+				CURRENT_PROJECT_VERSION = 30;
 				DEVELOPMENT_TEAM = B7NL26JPVD;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -396,7 +400,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 13.3;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = Ervin.Menucal;
 				PRODUCT_NAME = Menucal;
 				REGISTER_APP_GROUPS = YES;
