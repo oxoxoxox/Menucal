@@ -51,7 +51,7 @@ class CalendarManager: ObservableObject {
         $calendarInfos
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] _ in
-                self?.setFilterCalendarIds()
+                self?.persistCalendarSelection()
             }
             .store(in: &cancellables)
         
@@ -203,28 +203,33 @@ class CalendarManager: ObservableObject {
         
         let allEKCalendars = eventStore.calendars(for: .event)
         
-        let savedIDs = getFilterCalendarIds()
-        
-        var effectiveIDs = Set<String>()
-        if let savedIDs = savedIDs {
-            effectiveIDs = savedIDs
-            for calendar in allEKCalendars {
-                effectiveIDs.insert(calendar.calendarIdentifier)
-            }
-        } else {
-            effectiveIDs = Set(allEKCalendars.map { $0.calendarIdentifier })
-        }
+        let savedSelection = CalendarSelectionStore.decode(
+            from: SettingsManager.filterCalendar,
+            existingCalendarIDs: allEKCalendars.map { $0.calendarIdentifier }
+        )
         
         let calendarInfos = allEKCalendars.map { calendar in
             CalendarInfo(
                 id: calendar.calendarIdentifier,
                 title: calendar.title,
                 color: Color(calendar.cgColor),
-                isSelected: effectiveIDs.contains(calendar.calendarIdentifier)
+                // 用户显式取消勾选的日历保持关闭；未记录的新日历默认显示
+                isSelected: savedSelection?[calendar.calendarIdentifier] ?? true
             )
         }
         
         self.calendarInfos = calendarInfos.sorted { $0.title < $1.title }
+        
+        // 日历列表或其勾选状态变化后，按最新过滤条件重新获取事件
+        refreshEvents()
+    }
+    
+    /// 用户切换某个日历的显示开关：立即持久化，避免 debounce 窗口内被 loadCalendarInfo 的旧数据覆盖。
+    func setCalendarSelected(_ isSelected: Bool, calendarID: String) {
+        guard let index = calendarInfos.firstIndex(where: { $0.id == calendarID }) else { return }
+        calendarInfos[index].isSelected = isSelected
+        persistCalendarSelection()
+        refreshEvents()
     }
     
     func createEvent(event: CalendarEvent) async throws {
@@ -308,7 +313,7 @@ class CalendarManager: ObservableObject {
     
     private func writableCalendarForNewEvents() -> EKCalendar? {
         let calendars = eventStore.calendars(for: .event)
-        if let selectedIDs = getFilterCalendarIds(),
+        if let selectedIDs = getFilterCalendarIds(from: calendars),
            let selectedCalendar = calendars.first(where: { selectedIDs.contains($0.calendarIdentifier) && $0.allowsContentModifications }) {
             return selectedCalendar
         }
@@ -325,10 +330,9 @@ class CalendarManager: ObservableObject {
         NotificationCenter.default
             .publisher(for: .EKEventStoreChanged, object: eventStore)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] notification in
+            .sink { [weak self] _ in
                 Task {
                     await self?.loadCalendarInfo()
-                    self?.refreshEvents()
                 }
             }
             .store(in: &cancellables)
@@ -391,15 +395,12 @@ class CalendarManager: ObservableObject {
             return cachedEvents
         }
         
-        var calendarsToFetch: [EKCalendar]? = nil
-        
-        if let ids = getFilterCalendarIds() {
-            let allCalendars = eventStore.calendars(for: .event)
-            calendarsToFetch = allCalendars.filter { ids.contains($0.calendarIdentifier) }
-        }
-        if calendarsToFetch == nil || calendarsToFetch!.isEmpty{
-            return []
-        }
+        let allCalendars = eventStore.calendars(for: .event)
+        // 从未保存过选择时视为显示全部日历，与 CalendarSelectionStore 的约定保持一致
+        let calendarsToFetch = getFilterCalendarIds(from: allCalendars).map { ids in
+            allCalendars.filter { ids.contains($0.calendarIdentifier) }
+        } ?? allCalendars
+        guard !calendarsToFetch.isEmpty else { return [] }
         
         let predicate = eventStore.predicateForEvents(withStart: startDate, end: endDate, calendars: calendarsToFetch)
         let ekEvents = eventStore.events(matching: predicate)
@@ -437,21 +438,32 @@ class CalendarManager: ObservableObject {
         return events
     }
     
-    private func setFilterCalendarIds() {
-        let selectedIDs = calendarInfos.filter { $0.isSelected }.map { $0.id }
+    /// 持久化当前勾选状态；与已保存内容一致时跳过写入。
+    /// 合并写入：日历列表暂时不完整时（账号离线、日历库未就绪），不会抹掉已有记录。
+    private func persistCalendarSelection() {
+        guard !calendarInfos.isEmpty else { return }
         
-        if let data = try? JSONEncoder().encode(selectedIDs) {
-            SettingsManager.filterCalendar = data
+        var selection = CalendarSelectionStore.decode(
+            from: SettingsManager.filterCalendar,
+            existingCalendarIDs: calendarInfos.map { $0.id }
+        ) ?? [:]
+        for info in calendarInfos {
+            selection[info.id] = info.isSelected
         }
         
-        refreshEvents()
+        guard let data = CalendarSelectionStore.encode(selection),
+              data != SettingsManager.filterCalendar else {
+            return
+        }
+        
+        SettingsManager.filterCalendar = data
     }
     
-    private func getFilterCalendarIds() -> Set<String>? {
-        if let decodedIDs = try? JSONDecoder().decode([String].self, from: SettingsManager.filterCalendar), !decodedIDs.isEmpty {
-            return Set(decodedIDs)
-        }
-        return nil
+    private func getFilterCalendarIds(from calendars: [EKCalendar]) -> Set<String>? {
+        CalendarSelectionStore.selectedCalendarIDs(
+            from: SettingsManager.filterCalendar,
+            existingCalendarIDs: calendars.map { $0.calendarIdentifier }
+        )
     }
     
     private func groupEventsByDay(events: [CalendarEvent]) -> [Date: [CalendarEvent]] {

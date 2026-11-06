@@ -134,9 +134,7 @@ struct SettingsCalendarView: View {
                         Toggle("", isOn: Binding(
                             get: { calendar.isSelected },
                             set: { isOn in
-                                if let index = calendarManager.calendarInfos.firstIndex(where: { $0.id == calendar.id }) {
-                                    calendarManager.calendarInfos[index].isSelected = isOn
-                                }
+                                calendarManager.setCalendarSelected(isOn, calendarID: calendar.id)
                             }
                         ))
                         .toggleStyle(.switch)

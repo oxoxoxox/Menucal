@@ -22,7 +22,18 @@
 		0CE2D21C2E89390000C92A10 /* 2027.json in Resources */ = {isa = PBXBuildFile; fileRef = 0CE2D20C2E89390000C92A10 /* 2027.json */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		0CE2D2A12E89400000C92A10 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0CE2D1D62E89321A00C92A10 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0CE2D1DD2E89321A00C92A10;
+			remoteInfo = MacCalendar;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0CE2D2A02E89400000C92A10 /* MacCalendarTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacCalendarTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0CE2D1DE2E89321A00C92A10 /* Menucal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Menucal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0CE2D2002E89390000C92A10 /* 2015.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2015.json; sourceTree = "<group>"; };
 		0CE2D2012E89390000C92A10 /* 2016.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = 2016.json; sourceTree = "<group>"; };
@@ -58,10 +69,22 @@
 			path = MacCalendar;
 			sourceTree = "<group>";
 		};
+		0CE2D2A22E89400000C92A10 /* MacCalendarTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MacCalendarTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0CE2D1DB2E89321A00C92A10 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0CE2D2A32E89400000C92A10 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -75,6 +98,7 @@
 			isa = PBXGroup;
 			children = (
 				0CE2D1E02E89321A00C92A10 /* MacCalendar */,
+				0CE2D2A22E89400000C92A10 /* MacCalendarTests */,
 				0CE2D1DF2E89321A00C92A10 /* Products */,
 				0CE2D2202E89390000C92A10 /* MacCalendar/Data */,
 			);
@@ -84,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				0CE2D1DE2E89321A00C92A10 /* Menucal.app */,
+				0CE2D2A02E89400000C92A10 /* MacCalendarTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,6 +158,29 @@
 			productReference = 0CE2D1DE2E89321A00C92A10 /* Menucal.app */;
 			productType = "com.apple.product-type.application";
 		};
+		0CE2D2A42E89400000C92A10 /* MacCalendarTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0CE2D2A82E89400000C92A10 /* Build configuration list for PBXNativeTarget "MacCalendarTests" */;
+			buildPhases = (
+				0CE2D2A52E89400000C92A10 /* Sources */,
+				0CE2D2A32E89400000C92A10 /* Frameworks */,
+				0CE2D2A62E89400000C92A10 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0CE2D2A72E89400000C92A10 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0CE2D2A22E89400000C92A10 /* MacCalendarTests */,
+			);
+			name = MacCalendarTests;
+			packageProductDependencies = (
+			);
+			productName = MacCalendarTests;
+			productReference = 0CE2D2A02E89400000C92A10 /* MacCalendarTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -145,6 +193,10 @@
 				TargetAttributes = {
 					0CE2D1DD2E89321A00C92A10 = {
 						CreatedOnToolsVersion = 26.0.1;
+					};
+					0CE2D2A42E89400000C92A10 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 0CE2D1DD2E89321A00C92A10;
 					};
 				};
 			};
@@ -164,6 +216,7 @@
 			projectRoot = "";
 			targets = (
 				0CE2D1DD2E89321A00C92A10 /* MacCalendar */,
+				0CE2D2A42E89400000C92A10 /* MacCalendarTests */,
 			);
 		};
 /* End PBXProject section */
@@ -189,6 +242,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0CE2D2A62E89400000C92A10 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -199,7 +259,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		0CE2D2A52E89400000C92A10 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0CE2D2A72E89400000C92A10 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0CE2D1DD2E89321A00C92A10 /* MacCalendar */;
+			targetProxy = 0CE2D2A12E89400000C92A10 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0CE2D1E72E89321B00C92A10 /* Debug */ = {
@@ -418,6 +493,58 @@
 			};
 			name = Release;
 		};
+		0CE2D2A92E89400000C92A10 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = B7NL26JPVD;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MARKETING_VERSION = 1.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = Ervin.MenucalTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Menucal.app/Contents/MacOS/Menucal";
+			};
+			name = Debug;
+		};
+		0CE2D2AA2E89400000C92A10 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 30;
+				DEVELOPMENT_TEAM = B7NL26JPVD;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.3;
+				MARKETING_VERSION = 1.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = Ervin.MenucalTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Menucal.app/Contents/MacOS/Menucal";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -435,6 +562,15 @@
 			buildConfigurations = (
 				0CE2D1EA2E89321B00C92A10 /* Debug */,
 				0CE2D1EB2E89321B00C92A10 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0CE2D2A82E89400000C92A10 /* Build configuration list for PBXNativeTarget "MacCalendarTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0CE2D2A92E89400000C92A10 /* Debug */,
+				0CE2D2AA2E89400000C92A10 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
