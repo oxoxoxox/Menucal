@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import Foundation
+import CryptoKit
 
 private enum TestFailure: Error {
     case failed(String)
@@ -176,6 +177,8 @@ struct RegressionTests {
     }
 
     static func testDateIcons(bundle: Bundle) throws {
+        let fixtureURL = bundle.url(forResource: "date-icon-alpha", withExtension: "json")!
+        let expectedMasks = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: fixtureURL))
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         for scale in [CGFloat(1), CGFloat(2)] {
@@ -196,21 +199,12 @@ struct RegressionTests {
                     }
                 }
                 try require(alpha.contains { $0 > 0 }, "day \(day) must render visible pixels at \(scale)x")
-                if let native = NSImage(systemSymbolName: "\(day).calendar", accessibilityDescription: nil)?
-                    .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)) {
-                    let reference = try raster(native, scale: scale)
-                    try require(bitmap.pixelsWide == reference.pixelsWide && bitmap.pixelsHigh == reference.pixelsHigh,
-                        "day \(day) retains the original symbol dimensions")
-                    var difference: CGFloat = 0
-                    for y in 0..<bitmap.pixelsHigh {
-                        for x in 0..<bitmap.pixelsWide {
-                            difference += abs(bitmap.colorAt(x: x, y: y)!.alphaComponent
-                                - reference.colorAt(x: x, y: y)!.alphaComponent)
-                        }
-                    }
-                    try require(difference / CGFloat(bitmap.pixelsWide * bitmap.pixelsHigh) < 0.025,
-                        "day \(day) retains the original symbol shape at \(scale)x")
-                }
+                // Compare with the approved bundled style, not the host OS's mutable symbol catalog.
+                try require(bitmap.pixelsWide == Int(22 * scale) && bitmap.pixelsHigh == Int(20 * scale),
+                    "day \(day) retains the approved 22x20 pt dimensions")
+                let maskHash = SHA256.hash(data: alpha).map { String(format: "%02x", $0) }.joined()
+                try require(maskHash == expectedMasks["\(day)@\(Int(scale))x"],
+                    "day \(day) retains the approved date mask at \(scale)x")
                 renderedDates.insert(alpha)
             }
             try require(renderedDates.count == 31, "all 31 dates must have distinct digits at \(scale)x")

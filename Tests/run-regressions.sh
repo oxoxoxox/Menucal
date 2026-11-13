@@ -7,6 +7,7 @@ TEST_BUNDLE="$TEST_BUILD_DIR/RegressionResources.bundle"
 echo "Regression artifacts: $TEST_BUILD_DIR"
 mkdir -p "$TEST_BUNDLE/Contents/Resources"
 cp "$REPO_ROOT/Tests/Fixtures/Info.plist" "$TEST_BUNDLE/Contents/Info.plist"
+cp "$REPO_ROOT/Tests/Fixtures/date-icon-alpha.json" "$TEST_BUNDLE/Contents/Resources/"
 cp "$REPO_ROOT"/MacCalendar/Resources/MenuBarDateIcons/*.png "$TEST_BUNDLE/Contents/Resources/"
 
 xcrun swiftc -parse-as-library -swift-version 5 \
