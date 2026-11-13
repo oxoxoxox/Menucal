@@ -18,6 +18,7 @@ struct SettingsIconView: View {
     @AppStorage("appearanceMode") private var appearanceMode: AppearanceMode = SettingsManager.appearanceMode
     @AppStorage("highlightedWeekdayMask") private var highlightedWeekdayMask: Int = SettingsManager.highlightedWeekdayMask
     @AppStorage("hourlyChimeEnabled") private var hourlyChimeEnabled: Bool = SettingsManager.hourlyChimeEnabled
+    @AppStorage("hourlyChimeNighttimeDoNotDisturb") private var hourlyChimeNighttimeDoNotDisturb: Bool = SettingsManager.hourlyChimeNighttimeDoNotDisturb
     
     var body: some View {
         Form {
@@ -67,6 +68,15 @@ struct SettingsIconView: View {
                 
                 Toggle("显示周数", isOn: $showWeekNumber)
                 Toggle("开启整点报时", isOn: $hourlyChimeEnabled)
+                HStack {
+                    Toggle("夜间免打扰", isOn: $hourlyChimeNighttimeDoNotDisturb)
+                    Spacer()
+                    Text("22:00–次日 08:00")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.leading, 16)
+                .disabled(!hourlyChimeEnabled)
             }
 
             Section("高亮星期") {

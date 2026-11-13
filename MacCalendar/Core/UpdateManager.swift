@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import AppKit
 
 private struct ReleaseInfo {
     let version: String
@@ -38,7 +39,8 @@ private enum UpdateError: LocalizedError {
     }
 }
 
-class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
+@MainActor
+class UpdateManager: NSObject, ObservableObject, @preconcurrency URLSessionDownloadDelegate {
     static let shared = UpdateManager()
 
     private enum DefaultsKey {
@@ -49,15 +51,23 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     private let apiLatestReleaseURL = URL(string: "https://api.github.com/repos/ervinsae/Menucal/releases/latest")!
     private let webLatestReleaseURL = URL(string: "https://github.com/ervinsae/Menucal/releases/latest")!
     private let releaseDownloadBaseURL = "https://github.com/ervinsae/Menucal/releases/download"
-    private let automaticCheckInterval: TimeInterval = 24 * 60 * 60
-    
-    private var currentVersion: String {
-        Bundle.main.appVersion ?? "1.0.0"
-    }
+    private let defaults: UserDefaults
+    private let session: URLSession
+    private let currentVersion: String
+    private let automaticCheckInterval: TimeInterval
+    private let retryInterval: TimeInterval
+    private let startupDelay: TimeInterval
+    private var automaticCheckTimer: Timer?
+    private var automaticCheckTask: Task<Void, Never>?
+    private var automaticCheckTaskID: UUID?
+    private var wakeObserver: NSObjectProtocol?
+    private var automaticChecksStarted = false
+    private var lastAttemptFailed = false
 
     @Published private(set) var availability: UpdateAvailability = .unknown
     @Published private(set) var isChecking = false
     @Published private(set) var checkError: String?
+    @Published private(set) var lastSuccessfulCheckDate: Date?
     @Published private(set) var isDownloading = false
     @Published private(set) var downloadProgress = 0.0
     @Published private(set) var downloadURL: URL?
@@ -85,9 +95,92 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         return URLSession(configuration: config, delegate: self, delegateQueue: .main)
     }()
 
-    private override init() {
+    init(
+        defaults: UserDefaults = .standard,
+        session: URLSession = .shared,
+        currentVersion: String? = nil,
+        automaticCheckInterval: TimeInterval = 60 * 60,
+        retryInterval: TimeInterval = 15 * 60,
+        startupDelay: TimeInterval = 2
+    ) {
+        self.defaults = defaults
+        self.session = session
+        self.currentVersion = currentVersion ?? Bundle.main.appVersion ?? "1.0.0"
+        self.automaticCheckInterval = automaticCheckInterval
+        self.retryInterval = retryInterval
+        self.startupDelay = startupDelay
         super.init()
+        lastSuccessfulCheckDate = defaults.object(forKey: DefaultsKey.lastSuccessfulCheckDate) as? Date
         restoreCachedAvailability()
+    }
+
+    func startAutomaticChecks() {
+        guard !automaticChecksStarted else { return }
+        automaticChecksStarted = true
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.performAutomaticCheck()
+            }
+        }
+        scheduleAutomaticCheck(after: startupDelay)
+    }
+
+    func stopAutomaticChecks() {
+        automaticChecksStarted = false
+        automaticCheckTimer?.invalidate()
+        automaticCheckTimer = nil
+        automaticCheckTask?.cancel()
+        automaticCheckTask = nil
+        automaticCheckTaskID = nil
+        if let wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
+            self.wakeObserver = nil
+        }
+    }
+
+    private func performAutomaticCheck() {
+        guard automaticChecksStarted, automaticCheckTask == nil else { return }
+        guard !isChecking else {
+            scheduleAutomaticCheck(after: startupDelay)
+            return
+        }
+        automaticCheckTimer?.invalidate()
+        let taskID = UUID()
+        automaticCheckTaskID = taskID
+        automaticCheckTask = Task { @MainActor [weak self] in
+            guard let self, !Task.isCancelled, self.automaticCheckTaskID == taskID else { return }
+            await self.checkForUpdates(source: .automatic)
+            if self.automaticCheckTaskID == taskID {
+                self.automaticCheckTask = nil
+                self.automaticCheckTaskID = nil
+            }
+        }
+    }
+
+    private func scheduleAutomaticCheck(after delay: TimeInterval) {
+        guard automaticChecksStarted else { return }
+        automaticCheckTimer?.invalidate()
+        let timer = Timer(fire: Date(timeIntervalSinceNow: max(0.1, delay)), interval: 0, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.performAutomaticCheck()
+            }
+        }
+        timer.tolerance = min(60, max(0.01, delay * 0.05))
+        RunLoop.main.add(timer, forMode: .common)
+        automaticCheckTimer = timer
+    }
+
+    private func scheduleNextAutomaticCheck() {
+        if lastAttemptFailed {
+            scheduleAutomaticCheck(after: retryInterval)
+        } else {
+            let elapsed = lastSuccessfulCheckDate.map { Date().timeIntervalSince($0) } ?? 0
+            scheduleAutomaticCheck(after: automaticCheckInterval - elapsed)
+        }
     }
 
     func checkForUpdates(source: UpdateCheckSource = .manual) async {
@@ -95,7 +188,10 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
 
         switch source {
         case .automatic:
-            guard shouldPerformAutomaticCheck else { return }
+            guard shouldPerformAutomaticCheck else {
+                scheduleNextAutomaticCheck()
+                return
+            }
         case .manual:
             break
         }
@@ -107,12 +203,17 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
 
         defer {
             isChecking = false
+            if !Task.isCancelled {
+                scheduleNextAutomaticCheck()
+            }
         }
 
         do {
             let release = try await fetchLatestRelease()
+            try Task.checkCancellation()
             let comparisonResult = compareVersions(currentVersion, release.version)
 
+            lastAttemptFailed = false
             checkError = nil
             if comparisonResult == .orderedAscending {
                 availability = .available(version: release.version)
@@ -123,6 +224,8 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
             }
             persistSuccessfulCheck(version: release.version)
         } catch {
+            guard !Task.isCancelled else { return }
+            lastAttemptFailed = true
             if case .manual = source {
                 checkError = error.localizedDescription
             }
@@ -130,9 +233,7 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     }
 
     private var shouldPerformAutomaticCheck: Bool {
-        guard let lastCheckDate = UserDefaults.standard.object(
-            forKey: DefaultsKey.lastSuccessfulCheckDate
-        ) as? Date else {
+        guard let lastCheckDate = lastSuccessfulCheckDate else {
             return true
         }
 
@@ -140,7 +241,7 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     }
 
     private func restoreCachedAvailability() {
-        guard let cachedVersion = UserDefaults.standard.string(
+        guard let cachedVersion = defaults.string(
             forKey: DefaultsKey.latestVersion
         ) else {
             return
@@ -155,25 +256,28 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     }
 
     private func persistSuccessfulCheck(version: String) {
-        UserDefaults.standard.set(version, forKey: DefaultsKey.latestVersion)
-        UserDefaults.standard.set(Date(), forKey: DefaultsKey.lastSuccessfulCheckDate)
+        let date = Date()
+        defaults.set(version, forKey: DefaultsKey.latestVersion)
+        defaults.set(date, forKey: DefaultsKey.lastSuccessfulCheckDate)
+        lastSuccessfulCheckDate = date
     }
 
     private func fetchLatestRelease() async throws -> ReleaseInfo {
         do {
             return try await fetchLatestReleaseFromAPI()
         } catch {
+            try Task.checkCancellation()
             return try await fetchLatestReleaseFromLatestPage()
         }
     }
 
     private func fetchLatestReleaseFromAPI() async throws -> ReleaseInfo {
-        var request = URLRequest(url: apiLatestReleaseURL)
+        var request = URLRequest(url: apiLatestReleaseURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("Menucal/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
             let message = releaseErrorMessage(from: data) ?? "网络请求失败，状态码: \(httpResponse.statusCode)"
@@ -205,9 +309,12 @@ class UpdateManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     }
 
     private func fetchLatestReleaseFromLatestPage() async throws -> ReleaseInfo {
-        let (_, response) = try await URLSession.shared.data(from: webLatestReleaseURL)
+        let request = URLRequest(url: webLatestReleaseURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
+        let (_, response) = try await session.data(for: request)
 
-        guard let finalURL = response.url,
+        guard let response = response as? HTTPURLResponse,
+              response.statusCode == 200,
+              let finalURL = response.url,
               let tagName = finalURL.pathComponents.last,
               tagName.hasPrefix("v") else {
             throw UpdateError.invalidResponse

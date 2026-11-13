@@ -9,53 +9,6 @@ import SwiftUI
 import AppKit
 import Combine
 
-private enum MenuBarDateIconRenderer {
-    static func image(for date: Date, calendar: Calendar = .autoupdatingCurrent) -> NSImage {
-        let day = calendar.component(.day, from: date)
-        let configuration = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
-        if let image = NSImage(
-            systemSymbolName: "\(day).calendar",
-            accessibilityDescription: "Calendar"
-        )?.withSymbolConfiguration(configuration) {
-            image.isTemplate = true
-            return image
-        }
-
-        let monochromeConfiguration = NSImage.SymbolConfiguration(hierarchicalColor: .black)
-        let fallbackConfiguration = configuration.applying(monochromeConfiguration)
-        guard let calendarImage = NSImage(
-            systemSymbolName: "calendar",
-            accessibilityDescription: "Calendar"
-        )?.withSymbolConfiguration(fallbackConfiguration) else {
-            return NSImage(size: NSSize(width: 18, height: 18))
-        }
-
-        let size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: size, flipped: false) { rect in
-            calendarImage.draw(in: rect)
-
-            NSGraphicsContext.current?.compositingOperation = .clear
-            NSRect(x: 3.15, y: 2.55, width: 11.7, height: 8.4).fill()
-            NSGraphicsContext.current?.compositingOperation = .sourceOver
-
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .center
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 8.4, weight: .regular),
-                .foregroundColor: NSColor.black,
-                .paragraphStyle: paragraphStyle
-            ]
-            String(day).draw(
-                in: NSRect(x: 2.6, y: 3, width: 12.8, height: 8.3),
-                withAttributes: attributes
-            )
-            return true
-        }
-        image.isTemplate = true
-        return image
-    }
-}
-
 final class PopoverPresentationState: ObservableObject {
     @Published private(set) var isPinned = false
 
@@ -210,14 +163,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
             object: nil
         )
 
-        scheduleAutomaticUpdateCheck()
-    }
-
-    private func scheduleAutomaticUpdateCheck() {
-        Task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            await UpdateManager.shared.checkForUpdates(source: .automatic)
-        }
+        UpdateManager.shared.startAutomaticChecks()
     }
 
     private func applyCalendarIcon(to button: NSStatusBarButton) {
@@ -228,6 +174,7 @@ class AppDelegate: NSObject,NSApplicationDelegate, NSWindowDelegate, NSPopoverDe
 
     func applicationWillTerminate(_ notification: Notification) {
         hourlyChimeService.stop()
+        UpdateManager.shared.stopAutomaticChecks()
     }
 
     private func applyPopoverSize(_ size: CGSize) {

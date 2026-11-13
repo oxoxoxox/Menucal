@@ -14,7 +14,7 @@ final class HourlyChimeService: NSObject {
     private var player: AVAudioPlayer?
     private var lastPlayedHour: Date?
 
-    init(calendar: Calendar = .current) {
+    init(calendar: Calendar = .autoupdatingCurrent) {
         self.calendar = calendar
         super.init()
     }
@@ -78,6 +78,13 @@ final class HourlyChimeService: NSObject {
     }
 
     private func playChimeIfNeeded(at date: Date) {
+        guard Self.shouldPlayChime(
+            at: date,
+            enabled: SettingsManager.hourlyChimeEnabled,
+            nighttimeDoNotDisturb: SettingsManager.hourlyChimeNighttimeDoNotDisturb,
+            calendar: calendar
+        ) else { return }
+
         guard let hourStart = calendar.dateInterval(of: .hour, for: date)?.start else {
             playBeep()
             return
@@ -89,6 +96,17 @@ final class HourlyChimeService: NSObject {
 
         lastPlayedHour = hourStart
         playBeep()
+    }
+
+    static func shouldPlayChime(
+        at date: Date,
+        enabled: Bool,
+        nighttimeDoNotDisturb: Bool,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        guard enabled else { return false }
+        let hour = calendar.component(.hour, from: date)
+        return !nighttimeDoNotDisturb || (hour >= 8 && hour < 22)
     }
 
     private func playBeep() {

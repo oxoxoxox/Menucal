@@ -42,6 +42,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Run regression checks
+        run: bash Tests/run-regressions.sh
+
       - name: Build SwiftUI App
         run: |
           xcodebuild clean build \

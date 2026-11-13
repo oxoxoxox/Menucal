@@ -106,4 +106,5 @@ struct SettingsManager {
     @AppStorage("appearanceMode") static var appearanceMode: AppearanceMode = .system
     @AppStorage("highlightedWeekdayMask") static var highlightedWeekdayMask: Int = HighlightWeekday.saturday.mask | HighlightWeekday.sunday.mask
     @AppStorage("hourlyChimeEnabled") static var hourlyChimeEnabled = true
+    @AppStorage("hourlyChimeNighttimeDoNotDisturb") static var hourlyChimeNighttimeDoNotDisturb = false
 }

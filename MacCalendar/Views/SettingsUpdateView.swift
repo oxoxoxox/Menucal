@@ -43,6 +43,21 @@ struct SettingsUpdateView: View {
                     }
                     .disabled(updateManager.isChecking || updateManager.isDownloading || isInstalling)
                 }
+
+                Text("启动后每小时自动检查更新，发现新版本时会在左下方显示标识。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if let date = updateManager.lastSuccessfulCheckDate {
+                    HStack {
+                        Text("上次检查")
+                        Spacer()
+                        Text(date, style: .date)
+                        Text(date, style: .time)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
             }
             
             Section {
@@ -112,7 +127,7 @@ struct SettingsUpdateView: View {
                         icon: "info.circle",
                         color: .secondary,
                         title: "检查更新",
-                        message: "点击上方按钮获取最新版本信息"
+                        message: "将自动获取最新版本，也可以点击上方按钮立即检查"
                     )
                 }
             case .upToDate:

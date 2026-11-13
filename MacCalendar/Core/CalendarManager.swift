@@ -37,6 +37,7 @@ class CalendarManager: ObservableObject {
     private var eventsCache: [String: [CalendarEvent]] = [:]
     
     init() {
+        updateWeekdays()
         Task {
             await loadCalendarDays(date: selectedMonth)
             
@@ -64,16 +65,22 @@ class CalendarManager: ObservableObject {
     }
     
     private func updateWeekdays() {
+        var updatedWeekdays: [String]
         if SettingsManager.firstDayInWeek == .monday {
-            weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+            updatedWeekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
         }
         else {
-            weekdays = ["周日","周一", "周二", "周三", "周四", "周五", "周六"]
+            updatedWeekdays = ["周日","周一", "周二", "周三", "周四", "周五", "周六"]
         }
         
         if SettingsManager.showWeekNumber {
-            weekdays.insert("", at: 0)
+            updatedWeekdays.insert("", at: 0)
         }
+        // Update-cache writes must not reset the month the user is browsing.
+        guard weekdays != updatedWeekdays else { return }
+        let hadWeekdays = !weekdays.isEmpty
+        weekdays = updatedWeekdays
+        guard hadWeekdays else { return }
         Task{
             await goToCurrentMonth()
         }
