@@ -1,0 +1,29 @@
+# 本地发布流程文档，仅自己使用，不提交
+release-checklist.md
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode 用户级配置（仓库中 3 个历史 xcuserdata 文件仍被跟踪，不受影响）
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+
+# Xcode 构建产物
+build/
+DerivedData/
+*.hmap
+*.dSYM
+*.dSYM.zip
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# 编辑器 / 系统临时文件
+*.swp
+*~
