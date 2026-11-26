@@ -26,11 +26,10 @@ struct CalendarView: View {
         SettingsManager.showWeekNumber ? 8 : 7
     }
 
-    private var columns: [GridItem] {
-        Array(
-            repeating: GridItem(.flexible(minimum: 21, maximum: 26), spacing: 0),
-            count: columnCount
-        )
+    private var monthRows: [[CalendarDay]] {
+        stride(from: 0, to: calendarManager.calendarDays.count, by: columnCount).map { start in
+            Array(calendarManager.calendarDays[start..<min(start + columnCount, calendarManager.calendarDays.count)])
+        }
     }
 
     private var highlightedColumnColor: Color {
@@ -109,7 +108,7 @@ struct CalendarView: View {
     }
 
     private var weekdayHeader: some View {
-        LazyVGrid(columns: columns, spacing: 0) {
+        HStack(spacing: 0) {
             ForEach(Array(calendarManager.weekdays.enumerated()), id: \.offset) { index, day in
                 Text(weekdayDisplayName(day))
                     .font(.system(size: 12.5, weight: .semibold, design: .rounded))
@@ -122,31 +121,35 @@ struct CalendarView: View {
     }
 
     private var monthGrid: some View {
-        LazyVGrid(columns: columns, spacing: 0) {
-            ForEach(Array(calendarManager.calendarDays.enumerated()), id: \.element) { index, day in
-                let columnIndex = index % columnCount
-
-                if day.is_weekNumber {
-                    Text("\(day.weekNumber ?? 0)")
-                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
-                        .foregroundStyle(ItsycalPalette.secondaryText)
-                        .frame(height: 35)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    CalendarDayCell(
-                        day: day,
-                        isSelected: isSelected(day),
-                        calendar: calendar,
-                        isHighlightedColumn: isHighlightedColumn(columnIndex),
-                        highlightedColumnColor: highlightedColumnColor
-                    ) {
-                        if let date = day.date {
-                            performSelection {
-                                calendarManager.getSelectedDayEvents(date: date)
+        VStack(spacing: 0) {
+            ForEach(Array(monthRows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 0) {
+                    ForEach(Array(row.enumerated()), id: \.element) { columnIndex, day in
+                        if day.is_weekNumber {
+                            Text("\(day.weekNumber ?? 0)")
+                                .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                                .foregroundStyle(ItsycalPalette.secondaryText)
+                                .frame(height: 35)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            CalendarDayCell(
+                                day: day,
+                                isSelected: isSelected(day),
+                                calendar: calendar,
+                                isHighlightedColumn: isHighlightedColumn(columnIndex),
+                                highlightedColumnColor: highlightedColumnColor
+                            ) {
+                                if let date = day.date {
+                                    performSelection {
+                                        calendarManager.getSelectedDayEvents(date: date)
+                                    }
+                                }
                             }
                         }
                     }
                 }
+                // 让 Tab 按行遍历日期，而不是按二维网格的空间顺序跳转。
+                .focusSection()
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
