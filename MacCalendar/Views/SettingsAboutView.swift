@@ -79,8 +79,10 @@ struct SettingsAboutView: View {
                             .foregroundStyle(.secondary)
                     }
                     .contentShape(Rectangle())
+                    .itsycalFocusHighlight(cornerRadius: 6)
                 }
                 .buttonStyle(.plain)
+                .itsycalDisableSystemFocusEffect()
             } header: {
                 Text("项目信息")
             } footer: {

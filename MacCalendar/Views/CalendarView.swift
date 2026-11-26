@@ -78,7 +78,7 @@ struct CalendarView: View {
                     }
                 }
 
-                Button {
+                ItsycalPlainButton(cornerRadius: 4) {
                     performSelection {
                         calendarManager.resetToToday()
                     }
@@ -87,7 +87,6 @@ struct CalendarView: View {
                         .fill(isSelectedDayToday ? ItsycalPalette.secondaryText : Color(nsColor: .systemGreen))
                         .frame(width: 8, height: 8)
                 }
-                .buttonStyle(.plain)
                 .help("回到今天")
 
                 MonthNavigationButton(systemName: "chevron.right") {
@@ -210,13 +209,12 @@ private struct MonthNavigationButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        ItsycalPlainButton(cornerRadius: 3, action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 11.5, weight: .bold))
                 .foregroundStyle(ItsycalPalette.secondaryText)
                 .frame(width: 11, height: 15)
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -255,7 +253,7 @@ private struct CalendarDayCell: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        ItsycalPlainButton(cornerRadius: 4, action: action) {
             ZStack(alignment: .topTrailing) {
                 columnHighlightBackground
                     .frame(maxWidth: .infinity, minHeight: 35, maxHeight: 35)
@@ -301,7 +299,6 @@ private struct CalendarDayCell: View {
             .frame(maxWidth: .infinity, minHeight: 35, maxHeight: 35)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder

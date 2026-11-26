@@ -52,10 +52,9 @@ private struct SettingsBrandFooter: View {
                 .opacity(0.45)
 
             if updateManager.updateAvailable {
-                Button(action: showUpdates) {
+                ItsycalPlainButton(cornerRadius: 6, action: showUpdates) {
                     brandContent
                 }
-                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .help("发现新版本，前往检查更新")
             } else {

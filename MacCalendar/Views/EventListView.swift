@@ -331,13 +331,12 @@ private struct ItsycalToolbarButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        ItsycalPlainButton(cornerRadius: 5, action: action) {
             Image(systemName: systemName)
                 .font(.system(size: size, weight: .semibold))
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .help(help)
     }
 }
